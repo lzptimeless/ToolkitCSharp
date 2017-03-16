@@ -10,8 +10,9 @@ using System.Threading.Tasks;
 namespace Toolkit.Logs
 {
     /// <summary>
-    /// 日志记录器基础类，实现了一些基本功能
-    /// Logger base class, implemented some base function
+    /// 日志记录器基础类，实现了一些基本功能，如格式化日志
+    /// Logger base class, implemented some base function，something like
+    /// format the log
     /// </summary>
     public abstract class LoggerBase : ILogger
     {
@@ -110,10 +111,10 @@ namespace Toolkit.Logs
                 }
             }
 
-            string msg = string.Format("{0,-5} TIME:{1}, VERSION:{2}, CALLER:{3}, FILE:{4}, LINE:{5}\r\n{6}\r\n",
+            string msg = string.Format("{0,-5} TIME:{1}, VERSION:{2}, CALLER:{3}, FILE:{4}, LINE:{5}\r\n{6}",
                 category,
                 time,
-                this._version,
+                _version,
                 callerName,
                 fileName,
                 callerLineNumber,

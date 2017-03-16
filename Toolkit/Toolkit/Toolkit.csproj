@@ -41,6 +41,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Configs\ConfigBase.cs" />
+    <Compile Include="Configs\IConfig.cs" />
     <Compile Include="Logs\FileLogger.cs" />
     <Compile Include="Logs\ILogger.cs" />
     <Compile Include="Logs\LoggerBase.cs" />
