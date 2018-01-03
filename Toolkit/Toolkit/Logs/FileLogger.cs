@@ -27,7 +27,7 @@ namespace Toolkit.Logs
         /// <summary>
         /// 日志文件写入IO-The IO to write log
         /// </summary>
-        private StreamWriter _logWriter;
+        private Stream _logWriter;
         /// <summary>
         /// <see cref="WriteLog"/>函数是否正在运行，1:正在运行，0:没有运行
         /// Is <see cref="WriteLog"/> function running, 1:running, 0:not running
@@ -41,9 +41,7 @@ namespace Toolkit.Logs
             // .Net没有异步的函数来打开文件，这里也消耗不了多少时间，所以暂时以同步的方式创建这个文件
             // .Net have no api to open file asnychronously and create file won't take too
             // much time, so here use sync way to create file temporarily.
-            var stream = new FileStream(logPath, FileMode.Create, FileAccess.Write, FileShare.Read, 4096, true);
-            _logWriter = new StreamWriter(stream, Encoding.UTF8, 4096, false);
-            _logWriter.AutoFlush = false;
+            _logWriter = new FileStream(logPath, FileMode.Create, FileAccess.Write, FileShare.Read, 4096, true);
         }
         #endregion
 
@@ -80,6 +78,8 @@ namespace Toolkit.Logs
             // If this function is running in other thread, exit.
             if (Interlocked.CompareExchange(ref _isWriteLogRunning, 1, 0) == 1) return;
 
+            Encoding encoding = Encoding.UTF8;
+            byte[] linebreakBytes = encoding.GetBytes(new[] { '\n' });
             bool isOccurredException = false;
             string log;
             while (_logQueue.TryDequeue(out log))
@@ -88,7 +88,16 @@ namespace Toolkit.Logs
                 {
                     try
                     {
-                        await _logWriter.WriteLineAsync(log);
+                        // 编码字符串
+                        // Encoding log
+                        int logByteLength = encoding.GetByteCount(log);
+                        byte[] logBytes = new byte[logByteLength + linebreakBytes.Length];
+                        encoding.GetBytes(log, 0, log.Length, logBytes, 0);
+                        // 添加换行符
+                        // Add linebreak
+                        Array.Copy(linebreakBytes, 0, logBytes, logByteLength, linebreakBytes.Length);
+                        // 写入文件
+                        await _logWriter.WriteAsync(logBytes, 0, logBytes.Length);
                     }
                     catch (Exception ex)
                     {
@@ -112,28 +121,36 @@ namespace Toolkit.Logs
             Volatile.Write(ref _isWriteLogRunning, 0);
         }
 
+        private void StartWriteLog()
+        {
+            if (Volatile.Read(ref _isWriteLogRunning) == 0)
+            {
+                Task.Run(new Action(WriteLog));
+            }
+        }
+
         protected override void OnDebug(string log)
         {
             _logQueue.Enqueue(log);
-            WriteLog();
+            StartWriteLog();
         }
 
         protected override void OnError(string log)
         {
             _logQueue.Enqueue(log);
-            WriteLog();
+            StartWriteLog();
         }
 
         protected override void OnInfo(string log)
         {
             _logQueue.Enqueue(log);
-            WriteLog();
+            StartWriteLog();
         }
 
         protected override void OnWarn(string log)
         {
             _logQueue.Enqueue(log);
-            WriteLog();
+            StartWriteLog();
         }
         #endregion
     }
